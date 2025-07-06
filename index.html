@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Brain Spark Quiz</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    :root {
+      --main-bg: #fff0f5;
+      --accent: #c85c8e;
+      --light-accent: #ffd9ec;
+      --text-color: #222;
+      --dark-bg: #1e1e2f;
+      --dark-text: #f1f1f1;
+    }
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: var(--main-bg);
+      margin: 0;
+      padding: 0;
+      transition: background 0.5s, color 0.5s;
+    }
+    body.dark {
+      background: var(--dark-bg);
+      color: var(--dark-text);
+    }
+    .quiz-wrapper {
+      max-width: 680px;
+      background: white;
+      margin: 60px auto;
+      padding: 30px;
+      border-radius: 18px;
+      box-shadow: 0 0 12px rgba(0,0,0,0.08);
+      animation: fadeIn 2s ease;
+    }
+    body.dark .quiz-wrapper {
+      background: #2e2e3f;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    h1 {
+      text-align: center;
+      color: var(--accent);
+    }
+    .question-box {
+      margin: 30px 0;
+    }
+    .question-text {
+      font-weight: 600;
+      font-size: 20px;
+      margin-bottom: 16px;
+    }
+    .options-area label {
+      display: block;
+      background: var(--light-accent);
+      padding: 10px 12px;
+      border-radius: 10px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+    .options-area input {
+      margin-right: 8px;
+    }
+    .options-area label:hover {
+      background: #ffc3df;
+    }
+    .submit-btn {
+      background: var(--accent);
+      color: white;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      cursor: pointer;
+      display: block;
+      margin: 0 auto;
+      transition: background 0.3s ease;
+    }
+    .submit-btn:hover {
+      background: #a3436f;
+    }
+    .score-display {
+      margin-top: 40px;
+      font-size: 24px;
+      text-align: center;
+      font-weight: bold;
+      color: #444;
+    }
+    .certificate-btn {
+      background: #4CAF50;
+      color: white;
+      padding: 10px 20px;
+      margin-top: 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      display: block;
+      margin: 20px auto 0;
+    }
+    .input-name {
+      text-align: center;
+      margin-bottom: 20px;
+      animation: slideFade 1.5s ease;
+    }
+    @keyframes slideFade {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .input-name input {
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      width: 60%;
+      font-size: 16px;
+    }
+    .toggle-darkmode {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    #progressBar {
+      width: 100%;
+      background: #ddd;
+      height: 10px;
+      border-radius: 8px;
+      margin: 20px 0;
+    }
+    #progressFill {
+      height: 10px;
+      width: 0%;
+      background: var(--accent);
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+  <button class="toggle-darkmode" onclick="toggleDarkMode()">Toggle Dark Mode</button>
+  <div class="quiz-wrapper">
+    <h1>Brain Spark Quiz ✨</h1>
+    <div class="input-name">
+      <input type="text" id="userName" placeholder="Enter your name to begin...">
+      <button class="submit-btn" onclick="startQuiz()">Start Quiz</button>
+    </div>
+    <div id="quizBox" style="display:none">
+      <div class="question-box">
+        <div class="question-text" id="qText"></div>
+        <div class="options-area" id="optionsBox"></div>
+        <input type="text" id="fillBlank" style="display:none; width: 100%; padding: 10px; margin-top: 12px; border-radius: 8px; border: 1px solid #ccc;">
+        <div id="progressBar"><div id="progressFill"></div></div>
+      </div>
+      <button class="submit-btn" onclick="processAnswer()">Next</button>
+      <div class="score-display" id="scoreBoard"></div>
+    </div>
+  </div>
+  <audio id="correctSound" src="https://www.soundjay.com/buttons/sounds/button-3.mp3"></audio>
+  <audio id="endSound" src="https://www.soundjay.com/human/sounds/applause-8.mp3"></audio>
+  <script>
+    const questions = [
+      {
+        type: 'single',
+        q: 'What does CSS stand for?',
+        choices: ['Computer Style Sheets', 'Cascading Style Sheets', 'Creative Style Syntax', 'Colorful Styling Source'],
+        correct: 'Cascading Style Sheets'
+      },
+      {
+        type: 'multi',
+        q: 'Which of these are JavaScript frameworks?',
+        choices: ['Angular', 'Django', 'Vue', 'React'],
+        correct: ['Angular', 'Vue', 'React']
+      },
+      {
+        type: 'fill',
+        q: 'JavaScript was initially developed in _____ days.',
+        correct: '10'
+      },
+      {
+        type: 'single',
+        q: 'Which company developed the React library?',
+        choices: ['Google', 'Microsoft', 'Facebook', 'Twitter'],
+        correct: 'Facebook'
+      },
+      {
+        type: 'fill',
+        q: 'HTML stands for _____ Text Markup Language.',
+        correct: 'Hyper'
+      }
+    ];
+
+    let index = 0, score = 0;
+
+    function startQuiz() {
+      const userName = document.getElementById('userName').value.trim();
+      if (!userName) return alert('Please enter your name to start the quiz.');
+      document.querySelector('.input-name').style.display = 'none';
+      document.getElementById('quizBox').style.display = 'block';
+      renderQuestion();
+    }
+
+    function renderQuestion() {
+      const box = document.getElementById('qText');
+      const optionArea = document.getElementById('optionsBox');
+      const fillInput = document.getElementById('fillBlank');
+      const current = questions[index];
+
+      box.textContent = current.q;
+      optionArea.innerHTML = '';
+      fillInput.style.display = 'none';
+
+      const progress = ((index) / questions.length) * 100;
+      document.getElementById('progressFill').style.width = `${progress}%`;
+
+      if (current.type === 'single') {
+        current.choices.forEach(c => {
+          optionArea.innerHTML += `<label><input type="radio" name="opt" value="${c}"> ${c}</label>`;
+        });
+      } else if (current.type === 'multi') {
+        current.choices.forEach(c => {
+          optionArea.innerHTML += `<label><input type="checkbox" name="opt" value="${c}"> ${c}</label>`;
+        });
+      } else if (current.type === 'fill') {
+        fillInput.style.display = 'block';
+        fillInput.value = '';
+      }
+    }
+
+    function processAnswer() {
+      const current = questions[index];
+      let userAns;
+
+      if (current.type === 'single') {
+        const selected = document.querySelector('input[name="opt"]:checked');
+        if (!selected) return alert('Please choose one!');
+        userAns = selected.value;
+        if (userAns === current.correct) {
+          score++;
+          document.getElementById('correctSound').play();
+        }
+      } else if (current.type === 'multi') {
+        const selected = Array.from(document.querySelectorAll('input[name="opt"]:checked')).map(i => i.value);
+        if (selected.length === 0) return alert('Choose at least one.');
+        if (JSON.stringify(selected.sort()) === JSON.stringify(current.correct.sort())) {
+          score++;
+          document.getElementById('correctSound').play();
+        }
+      } else if (current.type === 'fill') {
+        const input = document.getElementById('fillBlank').value.trim();
+        if (!input) return alert('Please type your answer.');
+        if (input.toLowerCase() === current.correct.toLowerCase()) {
+          score++;
+          document.getElementById('correctSound').play();
+        }
+      }
+
+      index++;
+
+      if (index < questions.length) {
+        renderQuestion();
+      } else {
+        document.getElementById('endSound').play();
+        document.getElementById('quizBox').innerHTML = `
+          <div class='score-display'>🎉 You got ${score}/${questions.length} correct! 🎉</div>
+          <button class='certificate-btn' onclick='downloadPDFCertificate()'>Download PDF Certificate 🏆</button>
+        `;
+      }
+    }
+
+    function toggleDarkMode() {
+      document.body.classList.toggle("dark");
+    }
+
+    function downloadPDFCertificate() {
+      const user = document.getElementById('userName').value.trim() || 'Participant';
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+
+      doc.setFillColor(255, 240, 245);
+      doc.rect(0, 0, 210, 297, 'F');
+
+      // Border
+      doc.setDrawColor(200, 92, 142);
+      doc.setLineWidth(1.5);
+      doc.rect(10, 10, 190, 277);
+
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(200, 92, 142);
+      doc.setFontSize(26);
+      doc.text("Certificate of Completion", 105, 50, null, null, 'center');
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(14);
+      doc.setTextColor(33, 33, 33);
+      doc.text(`This is to certify that`, 105, 70, null, null, 'center');
+
+      doc.setFont('times', 'bold');
+      doc.setFontSize(18);
+      doc.setTextColor(0, 0, 0);
+      doc.text(user, 105, 85, null, null, 'center');
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(14);
+      doc.text(`has successfully completed the Brain Spark Quiz`, 105, 100, null, null, 'center');
+      doc.text(`with a score of ${score}/${questions.length}`, 105, 115, null, null, 'center');
+
+      doc.setFontSize(12);
+      doc.text(`Date: ${new Date().toLocaleDateString()}`, 105, 135, null, null, 'center');
+
+      // Signature
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'italic');
+      doc.text('Authorized Signature', 160, 200);
+      doc.line(140, 195, 200, 195);
+
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Generated by Brain Spark System', 105, 280, null, null, 'center');
+
+      doc.save(`${user}_BrainSpark_Certificate.pdf`);
+    }
+  </script>
+</body>
+</html>
